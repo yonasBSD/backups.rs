@@ -1,0 +1,27 @@
+[package]
+name    = "backup-rs"
+version = "0.1.0"
+edition = "2024"
+description = "Rustic backups with a config"
+license = "MIT"
+repository = "https://github.com/yonasBSD/backup.rs"
+keywords = ["backup", "rustic"]
+categories = ["utility"]
+
+[[bin]]
+name = "backup-rs"
+path = "src/main.rs"
+
+[dependencies]
+serde      = { version = "1",   features = ["derive"] }
+toml       = "1.0"
+anyhow     = "1"
+clap       = { version = "4",   features = ["derive"] }
+indicatif  = "0.18"
+console    = "0.16"
+thiserror = "2.0.18"
+
+[dev-dependencies]
+tempfile = "3"
+insta    = { version = "1", features = ["toml"] }
+serde_json = "1.0.149"

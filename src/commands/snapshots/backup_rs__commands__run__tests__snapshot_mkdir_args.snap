@@ -1,0 +1,9 @@
+---
+source: src/commands/run.rs
+expression: "build_mkdir_args(&make_cli(&[]), &make_cfg())"
+---
+[
+    "mkdir",
+    "-p",
+    "/tmp/repo",
+]

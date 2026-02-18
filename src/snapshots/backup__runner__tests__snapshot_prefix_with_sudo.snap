@@ -1,0 +1,7 @@
+---
+source: src/runner.rs
+expression: "prefix(&make_cli(&[\"--sudo\"]))"
+---
+[
+    "doas",
+]

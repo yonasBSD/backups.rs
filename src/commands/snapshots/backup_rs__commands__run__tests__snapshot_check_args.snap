@@ -1,0 +1,12 @@
+---
+source: src/commands/run.rs
+expression: "build_check_args(&make_cli(&[]), &make_cfg())"
+---
+[
+    "rustic",
+    "-r",
+    "/tmp/repo",
+    "--password",
+    "pw",
+    "check",
+]

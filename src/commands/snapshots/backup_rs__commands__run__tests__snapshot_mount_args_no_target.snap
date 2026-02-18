@@ -1,0 +1,7 @@
+---
+source: src/commands/run.rs
+expression: "build_mount_args(&make_cli(&[]), &cfg)"
+---
+[
+    "mount-nas",
+]

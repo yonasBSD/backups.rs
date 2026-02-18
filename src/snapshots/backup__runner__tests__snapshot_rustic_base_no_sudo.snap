@@ -1,0 +1,11 @@
+---
+source: src/runner.rs
+expression: cmd
+---
+[
+    "rustic",
+    "-r",
+    "/tmp/repo",
+    "--password",
+    "hunter2",
+]

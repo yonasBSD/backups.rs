@@ -1,0 +1,21 @@
+---
+source: src/commands/run.rs
+expression: "build_backup_args(&make_cli(&[]), &cfg)"
+---
+[
+    "rustic",
+    "-r",
+    "/tmp/repo",
+    "--password",
+    "pw",
+    "backup",
+    "--set-compression",
+    "3",
+    "--exclude-if-present",
+    "ignore",
+    "--glob=!**/.git",
+    "--glob=!tmp/",
+    "--glob=!**/target/",
+    "--glob=!**/node_modules/",
+    ".",
+]
