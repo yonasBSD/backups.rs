@@ -13,8 +13,8 @@
 //! password = ""          # empty = no encryption
 //!
 //! [mount]
-//! command = "mount-nas"  # optional NAS mount helper
-//! target  = "backups"    # argument passed to the mount command
+//! share = "new-backups"  # NFS share name
+//! user  = "alice"        # optional; defaults to $USER
 //!
 //! [backup]
 //! sources            = ["/home/alice/my-project"]
@@ -166,20 +166,28 @@ impl Default for RetentionConfig {
 
 // ─── [mount] ──────────────────────────────────────────────────────────────────
 
-/// Optional NAS/network share mount step.
+/// Optional NAS share mount step.
 ///
-/// When `command` is set, `backup` will run `[command] [target]` (optionally
-/// prefixed with `doas`) before doing anything else.  Both fields are
-/// optional; omit the entire `[mount]` section to skip mounting.
+/// When `share` is set, `backup` will mount the named NFS share before doing
+/// anything else.  The server and export path are resolved from the built-in
+/// share map in [`crate::mount`].  Omit the entire `[mount]` section (or
+/// omit `share`) to skip mounting.
+///
+/// ```toml
+/// [mount]
+/// share = "new-backups"   # name of the NFS share to mount
+/// user  = "yonas"         # optional; defaults to $USER / $LOGNAME
+/// ```
 #[derive(Debug, Deserialize, Serialize, Default)]
 pub struct MountConfig {
-    /// Executable to call, e.g. `"mount-nas"` or `"/usr/local/bin/mount-share"`.
+    /// Name of the NFS share to mount, e.g. `"new-backups"`.
     #[serde(default)]
-    pub command: Option<String>,
+    pub share: Option<String>,
 
-    /// Argument passed to the mount command, e.g. `"new-backups"`.
+    /// Username used to build the mountpoint path (`/home/<user>/nfs/<share>`).
+    /// Defaults to the `$USER` or `$LOGNAME` environment variable.
     #[serde(default)]
-    pub target: Option<String>,
+    pub user: Option<String>,
 }
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
@@ -188,7 +196,7 @@ pub struct MountConfig {
 // cannot call `Default::default()` for individual fields, only for whole
 // structs.
 
-pub const fn default_compression() -> u8 {
+pub fn default_compression() -> u8 {
     3
 }
 
@@ -205,13 +213,13 @@ pub fn default_exclude_marker() -> String {
     "ignore".into()
 }
 
-pub const fn default_keep_daily() -> u32 {
+pub fn default_keep_daily() -> u32 {
     2
 }
-pub const fn default_keep_weekly() -> u32 {
+pub fn default_keep_weekly() -> u32 {
     1
 }
-pub const fn default_keep_monthly() -> u32 {
+pub fn default_keep_monthly() -> u32 {
     1
 }
 
@@ -298,8 +306,8 @@ mod tests {
     #[test]
     fn default_mount_is_none() {
         let m = MountConfig::default();
-        assert!(m.command.is_none());
-        assert!(m.target.is_none());
+        assert!(m.share.is_none());
+        assert!(m.user.is_none());
     }
 
     // ── Round-trip serialisation ──────────────────────────────────────────────
@@ -323,8 +331,8 @@ mod tests {
                 monthly: 3,
             },
             mount: MountConfig {
-                command: Some("mount-nas".into()),
-                target: Some("backups".into()),
+                share: Some("new-backups".into()),
+                user: Some("alice".into()),
             },
         };
 
@@ -339,8 +347,8 @@ mod tests {
         assert_eq!(recovered.retention.daily, original.retention.daily);
         assert_eq!(recovered.retention.weekly, original.retention.weekly);
         assert_eq!(recovered.retention.monthly, original.retention.monthly);
-        assert_eq!(recovered.mount.command, original.mount.command);
-        assert_eq!(recovered.mount.target, original.mount.target);
+        assert_eq!(recovered.mount.share, original.mount.share);
+        assert_eq!(recovered.mount.user, original.mount.user);
     }
 
     #[test]
@@ -355,7 +363,7 @@ mod tests {
         assert_eq!(cfg.backup.compression, default_compression());
         assert_eq!(cfg.backup.globs, default_globs());
         assert_eq!(cfg.retention.daily, default_keep_daily());
-        assert!(cfg.mount.command.is_none());
+        assert!(cfg.mount.share.is_none());
     }
 
     #[test]

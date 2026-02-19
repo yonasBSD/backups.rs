@@ -1,0 +1,50 @@
+---
+source: src/mount.rs
+expression: map
+---
+[
+    (
+        "new-backups",
+        "nas.lan:/mnt/vol2/backups",
+    ),
+    (
+        "new-documents",
+        "documents.lan:/documents",
+    ),
+    (
+        "isos",
+        "nas.lan:/mnt/vol1/isos",
+    ),
+    (
+        "pictures",
+        "nas.lan:/mnt/vol1/pictures",
+    ),
+    (
+        "movies",
+        "nas.lan:/mnt/vol1/movies",
+    ),
+    (
+        "videos",
+        "nas.lan:/mnt/vol1/videos",
+    ),
+    (
+        "backups",
+        "nas.lan:/mnt/vol1/backups",
+    ),
+    (
+        "owncloud",
+        "nas.lan:/mnt/vol1/owncloud",
+    ),
+    (
+        "lan-share",
+        "nas.lan:/mnt/vol1/lan-share",
+    ),
+    (
+        "repos",
+        "nas.lan:/mnt/vol1/repos",
+    ),
+    (
+        "documents",
+        "nas.lan:/mnt/vol1/documents",
+    ),
+]

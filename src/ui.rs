@@ -107,7 +107,7 @@ impl StageOutcome {
     }
 
     /// Returns `true` if the stage did not succeed.
-    pub const fn failed(&self) -> bool {
+    pub fn failed(&self) -> bool {
         !self.success
     }
 }
@@ -168,7 +168,7 @@ pub fn run_captured(args: &[String]) -> Result<(bool, String, String)> {
 pub fn run_stage(label: &str, args: &[String]) -> StageOutcome {
     let spinner = make_spinner(label);
 
-    let result = run_captured(args);
+    let result = run_captured(&args);
     spinner.finish_and_clear();
 
     match result {
@@ -321,7 +321,7 @@ mod tests {
 
     #[test]
     fn run_stage_success_sets_success_true() {
-        let o = run_stage("Test", vec!["true".into()]);
+        let o = run_stage("Test", &["true".into()]);
         assert!(o.success);
         assert_eq!(o.label, "Test");
         assert!(o.error.is_none());
@@ -329,14 +329,14 @@ mod tests {
 
     #[test]
     fn run_stage_failure_sets_success_false() {
-        let o = run_stage("Test", vec!["false".into()]);
+        let o = run_stage("Test", &["false".into()]);
         assert!(!o.success);
         assert!(o.error.is_some());
     }
 
     #[test]
     fn run_stage_captures_stdout_on_failure() {
-        let o = run_stage("Test", vec![
+        let o = run_stage("Test", &[
             "sh".into(),
             "-c".into(),
             "echo bad output; exit 1".into(),

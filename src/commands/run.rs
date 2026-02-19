@@ -26,6 +26,7 @@ use anyhow::Result;
 use crate::{
     cli::Cli,
     config::Config,
+    mount,
     runner::{prefix, rustic_base},
     ui::{StageOutcome, print_summary, run_stage, skipped_stage},
 };
@@ -43,8 +44,8 @@ pub fn run(cli: &Cli, cfg: &Config) -> Result<()> {
     let mut outcomes: Vec<StageOutcome> = Vec::new();
 
     // 1. Mount
-    let mount = if !cli.no_mount && cfg.mount.command.is_some() {
-        run_stage("Mount", &build_mount_args(cli, cfg))
+    let mount = if !cli.no_mount && cfg.mount.share.is_some() {
+        mount::mount_share(&cfg.mount)
     } else {
         skipped_stage("Mount")
     };
@@ -133,18 +134,6 @@ pub fn run(cli: &Cli, cfg: &Config) -> Result<()> {
 // Each function returns the full `Vec<String>` that will be passed to
 // `run_stage`.  They are `pub` so that unit tests (and the snapshot tests
 // below) can call them directly without needing `rustic` installed.
-
-/// Arguments for the NAS mount helper.
-pub fn build_mount_args(cli: &Cli, cfg: &Config) -> Vec<String> {
-    let mut args: Vec<String> = prefix(cli);
-    if let Some(ref cmd) = cfg.mount.command {
-        args.push(cmd.clone());
-        if let Some(ref target) = cfg.mount.target {
-            args.push(target.clone());
-        }
-    }
-    args
-}
 
 /// Arguments for `mkdir -p <repo>`.
 pub fn build_mkdir_args(cli: &Cli, cfg: &Config) -> Vec<String> {
@@ -251,8 +240,8 @@ mod tests {
                 monthly: 1,
             },
             mount: MountConfig {
-                command: Some("mount-nas".into()),
-                target: Some("new-backups".into()),
+                share: Some("new-backups".into()),
+                user: None,
             },
         }
     }
@@ -298,19 +287,6 @@ mod tests {
         assert!(args.contains(&"--prune".to_string()));
         let d = args.iter().position(|a| a == "--keep-daily").unwrap();
         assert_eq!(args[d + 1], "2");
-    }
-
-    #[test]
-    fn mount_args_include_target() {
-        let args = build_mount_args(&make_cli(&[]), &make_cfg());
-        assert!(args.contains(&"mount-nas".to_string()));
-        assert!(args.contains(&"new-backups".to_string()));
-    }
-
-    #[test]
-    fn mount_args_with_sudo_start_with_doas() {
-        let args = build_mount_args(&make_cli(&["--sudo"]), &make_cfg());
-        assert_eq!(args[0], "doas");
     }
 
     #[test]
@@ -372,18 +348,6 @@ mod tests {
         cfg.retention.weekly = 4;
         cfg.retention.monthly = 12;
         insta::assert_debug_snapshot!(build_forget_args(&make_cli(&[]), &cfg));
-    }
-
-    #[test]
-    fn snapshot_mount_args() {
-        insta::assert_debug_snapshot!(build_mount_args(&make_cli(&[]), &make_cfg()));
-    }
-
-    #[test]
-    fn snapshot_mount_args_no_target() {
-        let mut cfg = make_cfg();
-        cfg.mount.target = None;
-        insta::assert_debug_snapshot!(build_mount_args(&make_cli(&[]), &cfg));
     }
 
     #[test]

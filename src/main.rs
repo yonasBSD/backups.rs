@@ -30,6 +30,7 @@
 mod cli;
 mod commands;
 mod config;
+mod mount;
 mod runner;
 mod ui;
 
@@ -52,7 +53,7 @@ fn main() -> Result<()> {
             let cfg = load_config(&cli.config)?;
 
             if cli.print_config {
-                println!("\n{cfg:#?}");
+                println!("{cfg:#?}");
                 return Ok(());
             }
 

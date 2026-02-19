@@ -16,9 +16,11 @@ password = ""
 
 [mount]
 # Optional: mount a NAS share before backing up.
-# The tool will run: [command] [target]  (prefixed with doas if --sudo is set)
-# command = "mount-nas"
-# target  = "new-backups"
+# The share name is resolved to the correct NFS server and export path
+# automatically.  Supported shares: new-backups, new-documents, isos,
+# pictures, movies, videos, backups, owncloud, lan-share, repos, documents.
+# share = "new-backups"
+# user  = "yonas"   # defaults to $USER if omitted
 
 [backup]
 # Paths to include in the snapshot.  Defaults to "." if this list is empty.

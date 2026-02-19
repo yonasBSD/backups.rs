@@ -29,8 +29,7 @@ pub fn run(dest: &Path) -> Result<()> {
     if dest.exists() {
         let outcome = StageOutcome {
             label: format!(
-                "'{}' already exists — refusing to overwrite.\n\
-             Delete it manually or use --config to specify a different path.",
+                "'{}' already exists — refusing to overwrite.\n                 Delete it manually or use --config to specify a different path.",
                 dest.display()
             ),
             success: false,
@@ -39,7 +38,6 @@ pub fn run(dest: &Path) -> Result<()> {
             error: None,
         };
         outcome.print();
-
         anyhow::bail!("");
     }
 
@@ -88,7 +86,8 @@ impl EnvContext {
         // running inside "/home/alice/projects/myapp" → "myapp".
         let repo_name = PathBuf::from(&cwd)
             .file_name()
-            .map_or_else(|| "backup".into(), |n| n.to_string_lossy().into_owned());
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "backup".into());
 
         Ok(Self {
             cwd,
@@ -127,9 +126,11 @@ password = ""
 
 [mount]
 # Optional: mount a NAS share before backing up.
-# The tool will run: [command] [target]  (prefixed with doas if --sudo is set)
-# command = "mount-nas"
-# target  = "new-backups"
+# The share name is resolved to the correct NFS server and export path
+# automatically.  Supported shares: new-backups, new-documents, isos,
+# pictures, movies, videos, backups, owncloud, lan-share, repos, documents.
+# share = "new-backups"
+# user  = "{username}"   # defaults to $USER if omitted
 
 [backup]
 # Paths to include in the snapshot.  Defaults to "." if this list is empty.
