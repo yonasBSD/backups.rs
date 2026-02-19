@@ -9,7 +9,7 @@ expression: out
 [repo]
 # Filesystem path (or sftp:/rclone: URI) of the rustic repository.
 # The directory will be created automatically on the first run.
-path = "/home/yonas/nfs/new-backups/rustic/myapp"
+path = "/home/alice/nfs/new-backups/rustic/myapp"
 # Encryption password.  Use "" for an unencrypted repository.
 # WARNING: do not commit real passwords to version control.
 password = ""
@@ -20,12 +20,12 @@ password = ""
 # automatically.  Supported shares: new-backups, new-documents, isos,
 # pictures, movies, videos, backups, owncloud, lan-share, repos, documents.
 # share = "new-backups"
-# user  = "yonas"   # defaults to $USER if omitted
+# user  = "alice"   # defaults to $USER if omitted
 
 [backup]
 # Paths to include in the snapshot.  Defaults to "." if this list is empty.
 sources = [
-    "/home/yonas/projects/myapp",
+    "/home/alice/projects/myapp",
 ]
 
 # zstd compression level (1 = fastest / largest, 22 = slowest / smallest).

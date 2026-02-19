@@ -15,7 +15,7 @@
 //! ```toml
 //! [mount]
 //! share = "new-backups"   # name of the NFS share to mount
-//! user  = "yonas"         # optional; defaults to $USER / $LOGNAME
+//! user  = "alice"         # optional; defaults to $USER / $LOGNAME
 //! ```
 //!
 //! Omit the `[mount]` section entirely (or omit `share`) to skip mounting.

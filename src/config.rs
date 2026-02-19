@@ -176,7 +176,7 @@ impl Default for RetentionConfig {
 /// ```toml
 /// [mount]
 /// share = "new-backups"   # name of the NFS share to mount
-/// user  = "yonas"         # optional; defaults to $USER / $LOGNAME
+/// user  = "alice"         # optional; defaults to $USER / $LOGNAME
 /// ```
 #[derive(Debug, Deserialize, Serialize, Default)]
 pub struct MountConfig {

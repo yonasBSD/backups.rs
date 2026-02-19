@@ -284,7 +284,7 @@ mod snapshot_tests {
     /// change shows up as an explicit snapshot diff.
     #[test]
     fn snapshot_template_typical() {
-        let out = render_template("/home/yonas/projects/myapp", "yonas", "myapp");
+        let out = render_template("/home/alice/projects/myapp", "alice", "myapp");
         insta::assert_snapshot!(out);
     }
 

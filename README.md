@@ -61,7 +61,7 @@ The `backup.toml` file is designed to be readable and flexible. Every section is
 
 [repo]
 # Path to the rustic repository (local path or rclone/sftp URI)
-path     = "/home/yonas/nfs/new-backups/rustic/myapp"
+path     = "/home/alice/nfs/new-backups/rustic/myapp"
 # Encryption password. Leave empty ("") for no encryption.
 password = ""
 
@@ -72,7 +72,7 @@ password = ""
 # Supported: new-backups, new-documents, isos, pictures, movies, videos,
 #            backups, owncloud, lan-share, repos, documents
 share = "new-backups"
-# user = "yonas"   # defaults to $USER if omitted
+# user = "alice"   # defaults to $USER if omitted
 
 [backup]
 # Paths to include in the snapshot.
