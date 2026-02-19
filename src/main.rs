@@ -79,16 +79,14 @@ fn load_merged_config(local_path: &std::path::Path) -> Result<config::Config> {
         .and_then(|p| parse_partial(p).ok().flatten())
         .unwrap_or_default();
 
-    let local: PartialConfig = if let Some(p) = parse_partial(local_path)? {
-        p
-    } else {
+    let local: PartialConfig = parse_partial(local_path)?.unwrap_or_else(|| {
         eprintln!(
             "Warning: config file '{}' not found, using defaults.\n\
-             Run 'backup init' to generate a starter config.",
+                 Run 'backup init' to generate a starter config.",
             local_path.display()
         );
         PartialConfig::default()
-    };
+    });
 
     Ok(global.merge(local).resolve())
 }

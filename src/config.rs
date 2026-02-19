@@ -242,6 +242,7 @@ pub const fn default_keep_monthly() -> u32 {
 ///
 /// Returns an error if the file exists but cannot be read or is not valid
 /// TOML.
+#[allow(dead_code)]
 pub fn load_config(path: &Path) -> Result<Config> {
     if !path.exists() {
         eprintln!(
