@@ -9,11 +9,11 @@
 //! # Usage
 //!
 //! ```text
-//! backup               # run the full backup pipeline using backup.toml
-//! backup init          # scaffold a backup.toml in the current directory
+//! backup                 # run the full backup pipeline using backup.toml
+//! backup init            # scaffold a backup.toml in the current directory
 //! backup --print-config  # show parsed config without running anything
-//! backup --no-prune    # skip forget/prune (fast incremental snapshot)
-//! backup --sudo        # prefix all commands with doas
+//! backup --no-prune      # skip forget/prune (fast incremental snapshot)
+//! backup --sudo          # prefix all commands with doas
 //! ```
 //!
 //! # Module layout
