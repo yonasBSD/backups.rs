@@ -11,7 +11,7 @@ use clap::Parser;
 /// Top-level CLI arguments, shared across every subcommand.
 #[derive(Parser, Debug)]
 #[command(
-    name    = "backup",
+    name    = "backup.rs",
     about   = "A rustic backup wrapper driven by backup.toml",
     version,
     // Show a compact two-column help layout.
@@ -77,9 +77,9 @@ pub struct Cli {
 
 /// Explicit subcommands.  Running `backup` with no subcommand triggers the
 /// default backup pipeline.
-#[derive(clap::Subcommand, Debug, PartialEq)]
+#[derive(clap::Subcommand, Debug, PartialEq, Eq)]
 pub enum Subcommand {
-    /// Scaffold a `backup.toml` in the current directory.
+    /// Create a `backup.toml` in the current directory.
     ///
     /// The generated file is pre-populated with sensible defaults:
     /// - `[backup].sources` is set to the current working directory.

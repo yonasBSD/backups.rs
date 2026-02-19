@@ -20,6 +20,8 @@ clap       = { version = "4",   features = ["derive"] }
 indicatif  = "0.18"
 console    = "0.16"
 thiserror = "2.0.18"
+dirs = "6.0.0"
+dirs-next = "2.0.0"
 
 [dev-dependencies]
 tempfile = "3"

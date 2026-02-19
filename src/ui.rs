@@ -107,7 +107,7 @@ impl StageOutcome {
     }
 
     /// Returns `true` if the stage did not succeed.
-    pub fn failed(&self) -> bool {
+    pub const fn failed(&self) -> bool {
         !self.success
     }
 }
@@ -168,7 +168,7 @@ pub fn run_captured(args: &[String]) -> Result<(bool, String, String)> {
 pub fn run_stage(label: &str, args: &[String]) -> StageOutcome {
     let spinner = make_spinner(label);
 
-    let result = run_captured(&args);
+    let result = run_captured(args);
     spinner.finish_and_clear();
 
     match result {

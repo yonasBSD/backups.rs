@@ -1,9 +1,14 @@
 //! Configuration types and loading logic.
 //!
-//! `Config` is a direct 1-to-1 mapping of `backup.toml`.  Every field has a
-//! `Default` impl so the file is entirely optional — running `backup` without
-//! any config file falls back to safe, minimal defaults and backs up the
-//! current directory.
+//! Configuration is loaded from two sources and merged, with the local file
+//! taking precedence over the global one:
+//!
+//! | Path | Purpose |
+//! |---|---|
+//! | `~/.config/backup.rs/config.toml` | Global defaults (e.g. `[mount]` share/user) |
+//! | `./backup.toml` (or `--config`) | Per-project overrides |
+//!
+//! Every field has a `Default` impl so both files are entirely optional.
 //!
 //! # File format
 //!
@@ -23,9 +28,9 @@
 //! globs              = ["!**/.git", "!tmp/", "!**/target/", "!**/node_modules/"]
 //!
 //! [retention]
-//! keep_daily   = 2
-//! keep_weekly  = 1
-//! keep_monthly = 1
+//! daily   = 2
+//! weekly  = 1
+//! monthly = 1
 //! ```
 
 use std::path::Path;
@@ -81,7 +86,7 @@ pub struct RepoConfig {
 impl Default for RepoConfig {
     fn default() -> Self {
         Self {
-            path: String::from("./.backup"),
+            path: default_repo_path(),
             password: String::new(),
         }
     }
@@ -137,7 +142,7 @@ impl Default for BackupConfig {
 /// How many snapshots to keep when pruning.
 ///
 /// Passed directly to `rustic forget --prune`.  rustic selects the most
-/// recent snapshot within each window, so `keep_daily = 2` keeps one
+/// recent snapshot within each window, so `daily = 2` keeps one
 /// snapshot from each of the last two calendar days that had a backup.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct RetentionConfig {
@@ -196,7 +201,10 @@ pub struct MountConfig {
 // cannot call `Default::default()` for individual fields, only for whole
 // structs.
 
-pub fn default_compression() -> u8 {
+pub fn default_repo_path() -> String {
+    "./.backup".into()
+}
+pub const fn default_compression() -> u8 {
     3
 }
 
@@ -213,13 +221,13 @@ pub fn default_exclude_marker() -> String {
     "ignore".into()
 }
 
-pub fn default_keep_daily() -> u32 {
+pub const fn default_keep_daily() -> u32 {
     2
 }
-pub fn default_keep_weekly() -> u32 {
+pub const fn default_keep_weekly() -> u32 {
     1
 }
-pub fn default_keep_monthly() -> u32 {
+pub const fn default_keep_monthly() -> u32 {
     1
 }
 
@@ -248,6 +256,142 @@ pub fn load_config(path: &Path) -> Result<Config> {
         std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
 
     toml::from_str(&text).with_context(|| format!("parsing {}", path.display()))
+}
+
+// ─── Two-level merge ─────────────────────────────────────────────────────────
+//
+// Config is loaded from two files and merged, with the local file winning:
+//
+//   ~/.config/backup.rs/config.toml   ← global defaults (e.g. [mount] share)
+//   ./backup.toml  (or --config)      ← per-project overrides
+//
+// The merge is field-granular: a local `[mount]` with only `share` set still
+// inherits `user` from the global config.  This is achieved by deserialising
+// each file into a `PartialConfig` (every leaf wrapped in `Option`) and then
+// overlaying local over global before resolving defaults.
+
+/// A fully-optional mirror of [`Config`] used during the two-level merge.
+///
+/// Every field is `Option<_>` so that "not present in this file" can be
+/// distinguished from "explicitly set to a value".  Call [`PartialConfig::merge`]
+/// to layer a local partial over a global one, then [`PartialConfig::resolve`]
+/// to fill any remaining `None`s with defaults and produce a concrete [`Config`].
+#[derive(Debug, Deserialize, Default)]
+pub struct PartialConfig {
+    #[serde(default)]
+    pub repo: PartialRepoConfig,
+    #[serde(default)]
+    pub backup: PartialBackupConfig,
+    #[serde(default)]
+    pub retention: PartialRetentionConfig,
+    #[serde(default)]
+    pub mount: PartialMountConfig,
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct PartialRepoConfig {
+    pub path: Option<String>,
+    pub password: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct PartialBackupConfig {
+    pub sources: Option<Vec<String>>,
+    pub compression: Option<u8>,
+    pub globs: Option<Vec<String>>,
+    pub exclude_if_present: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct PartialRetentionConfig {
+    pub daily: Option<u32>,
+    pub weekly: Option<u32>,
+    pub monthly: Option<u32>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct PartialMountConfig {
+    pub share: Option<String>,
+    pub user: Option<String>,
+}
+
+impl PartialConfig {
+    /// Overlay `other` (local) on top of `self` (global).
+    ///
+    /// For each field, the local value wins if it is `Some`; otherwise the
+    /// global value is kept.  This means a local file that only sets `[repo]`
+    /// still inherits `[mount]` from the global config.
+    pub fn merge(self, other: Self) -> Self {
+        Self {
+            repo: PartialRepoConfig {
+                path: other.repo.path.or(self.repo.path),
+                password: other.repo.password.or(self.repo.password),
+            },
+            backup: PartialBackupConfig {
+                sources: other.backup.sources.or(self.backup.sources),
+                compression: other.backup.compression.or(self.backup.compression),
+                globs: other.backup.globs.or(self.backup.globs),
+                exclude_if_present: other
+                    .backup
+                    .exclude_if_present
+                    .or(self.backup.exclude_if_present),
+            },
+            retention: PartialRetentionConfig {
+                daily: other.retention.daily.or(self.retention.daily),
+                weekly: other.retention.weekly.or(self.retention.weekly),
+                monthly: other.retention.monthly.or(self.retention.monthly),
+            },
+            mount: PartialMountConfig {
+                share: other.mount.share.or(self.mount.share),
+                user: other.mount.user.or(self.mount.user),
+            },
+        }
+    }
+
+    /// Resolve a `PartialConfig` into a concrete [`Config`] by filling any
+    /// `None` fields with their default values.
+    pub fn resolve(self) -> Config {
+        Config {
+            repo: RepoConfig {
+                path: self.repo.path.unwrap_or_else(default_repo_path),
+                password: self.repo.password.unwrap_or_default(),
+            },
+            backup: BackupConfig {
+                sources: self.backup.sources.unwrap_or_default(),
+                compression: self.backup.compression.unwrap_or_else(default_compression),
+                globs: self.backup.globs.unwrap_or_else(default_globs),
+                exclude_if_present: self
+                    .backup
+                    .exclude_if_present
+                    .unwrap_or_else(default_exclude_marker),
+            },
+            retention: RetentionConfig {
+                daily: self.retention.daily.unwrap_or_else(default_keep_daily),
+                weekly: self.retention.weekly.unwrap_or_else(default_keep_weekly),
+                monthly: self.retention.monthly.unwrap_or_else(default_keep_monthly),
+            },
+            mount: MountConfig {
+                share: self.mount.share,
+                user: self.mount.user,
+            },
+        }
+    }
+}
+
+/// Parse a TOML file at `path` into a [`PartialConfig`].
+///
+/// Returns:
+/// - `Ok(Some(partial))` — file exists and parsed successfully
+/// - `Ok(None)`          — file does not exist (not an error)
+/// - `Err(_)`            — file exists but could not be read or parsed
+pub fn parse_partial(path: &Path) -> Result<Option<PartialConfig>> {
+    if !path.exists() {
+        return Ok(None);
+    }
+    let text =
+        std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
+    let partial = toml::from_str(&text).with_context(|| format!("parsing {}", path.display()))?;
+    Ok(Some(partial))
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -410,5 +554,91 @@ mod tests {
 
         let result = load_config(f.path());
         assert!(result.is_err(), "invalid TOML should produce an error");
+    }
+
+    // ── Two-level merge ───────────────────────────────────────────────────────
+
+    #[test]
+    fn local_config_overrides_global() {
+        use std::io::Write;
+
+        let mut global = tempfile::NamedTempFile::new().unwrap();
+        write!(global, "[mount]\nshare = \"new-backups\"\nuser = \"alice\"\n[repo]\npath = \"/global/repo\"\npassword = \"\"\n").unwrap();
+
+        let mut local = tempfile::NamedTempFile::new().unwrap();
+        write!(local, "[repo]\npath = \"/local/repo\"\npassword = \"\"\n").unwrap();
+
+        let cfg = parse_partial(global.path())
+            .unwrap()
+            .unwrap()
+            .merge(parse_partial(local.path()).unwrap().unwrap())
+            .resolve();
+
+        assert_eq!(cfg.repo.path, "/local/repo");
+        assert_eq!(cfg.mount.share.as_deref(), Some("new-backups"));
+        assert_eq!(cfg.mount.user.as_deref(), Some("alice"));
+    }
+
+    #[test]
+    fn global_mount_used_when_local_has_none() {
+        use std::io::Write;
+
+        let mut global = tempfile::NamedTempFile::new().unwrap();
+        write!(
+            global,
+            "[mount]\nshare = \"new-backups\"\nuser = \"alice\"\n"
+        )
+        .unwrap();
+
+        let mut local = tempfile::NamedTempFile::new().unwrap();
+        write!(local, "[repo]\npath = \"/tmp/repo\"\npassword = \"\"\n").unwrap();
+
+        let cfg = parse_partial(global.path())
+            .unwrap()
+            .unwrap()
+            .merge(parse_partial(local.path()).unwrap().unwrap())
+            .resolve();
+
+        assert_eq!(cfg.mount.share.as_deref(), Some("new-backups"));
+        assert_eq!(cfg.mount.user.as_deref(), Some("alice"));
+    }
+
+    #[test]
+    fn local_mount_overrides_global_mount() {
+        use std::io::Write;
+
+        let mut global = tempfile::NamedTempFile::new().unwrap();
+        write!(
+            global,
+            "[mount]\nshare = \"new-backups\"\nuser = \"alice\"\n"
+        )
+        .unwrap();
+
+        let mut local = tempfile::NamedTempFile::new().unwrap();
+        write!(local, "[mount]\nshare = \"isos\"\n").unwrap();
+
+        let cfg = parse_partial(global.path())
+            .unwrap()
+            .unwrap()
+            .merge(parse_partial(local.path()).unwrap().unwrap())
+            .resolve();
+
+        assert_eq!(cfg.mount.share.as_deref(), Some("isos"));
+        assert_eq!(cfg.mount.user.as_deref(), Some("alice"));
+    }
+
+    #[test]
+    fn merge_with_no_global_equals_local_only() {
+        use std::io::Write;
+
+        let mut local = tempfile::NamedTempFile::new().unwrap();
+        write!(local, "[repo]\npath = \"/tmp/solo\"\npassword = \"\"\n").unwrap();
+
+        let cfg = PartialConfig::default()
+            .merge(parse_partial(local.path()).unwrap().unwrap())
+            .resolve();
+
+        assert_eq!(cfg.repo.path, "/tmp/solo");
+        assert!(cfg.mount.share.is_none());
     }
 }

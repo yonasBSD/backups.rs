@@ -86,8 +86,7 @@ impl EnvContext {
         // running inside "/home/alice/projects/myapp" → "myapp".
         let repo_name = PathBuf::from(&cwd)
             .file_name()
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_else(|| "backup".into());
+            .map_or_else(|| "backup".into(), |n| n.to_string_lossy().into_owned());
 
         Ok(Self {
             cwd,
