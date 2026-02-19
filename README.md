@@ -5,7 +5,7 @@
 [![Rust 1.85+](https://img.shields.io/badge/rust-1.85%2B-orange.svg)](https://www.rust-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Stop wrestling with brittle, hand-edited shell scripts. `backup.rs` brings structure to your backups. Drop a `backup.toml` into any project, run `backup init`, and you’re protected.
+Stop wrestling with brittle, hand-edited shell scripts. `backup.rs` brings structure to your backups. Drop a `backup.toml` into any project, run `backup init`, and you're protected.
 
 ---
 
@@ -14,7 +14,8 @@ Stop wrestling with brittle, hand-edited shell scripts. `backup.rs` brings struc
 * **Atomic Pipelines:** Runs the full lifecycle: Mount → Init → Check → Backup → Forget → Compact.
 * **Clean UI:** Hides the "noise" of raw `rustic` output behind elegant [indicatif] spinners.
 * **Intelligent Failures:** If a stage fails, the full logs are captured and displayed immediately for debugging.
-* **Zero-Overhead:** A single binary you can drop anywhere—perfect for cron jobs.
+* **Built-in NFS Mounting:** Knows how to mount your NAS shares natively — no external `mount-nas` script required.
+* **Zero-Overhead:** A single binary you can drop anywhere — perfect for cron jobs.
 * **Modern Rust:** Built with Rust 1.85 (Edition 2024) for safety and speed.
 
 ---
@@ -37,15 +38,15 @@ backup               # Execute the full pipeline
 ### The Experience
 ```text
   ⠹  Mounting NAS...
-  ✓  Mount Complete
+  ✓  Mount
   ⠼  Checking Integrity...
-  ✓  Check Passed
+  ✓  Check
   ⠴  Backing Up...
-  ✓  Snapshot Created
+  ✓  Backup
   ⠧  Applying Retention Policy...
-  ✓  Forget/Prune Complete
+  ✓  Forget
 
-  ✨ All stages completed successfully.
+  ✓ All stages completed successfully.
 ```
 
 ---
@@ -60,15 +61,18 @@ The `backup.toml` file is designed to be readable and flexible. Every section is
 
 [repo]
 # Path to the rustic repository (local path or rclone/sftp URI)
-path     = "/home/yonas/nfs/backups/rustic/myapp"
+path     = "/home/yonas/nfs/new-backups/rustic/myapp"
 # Encryption password. Leave empty ("") for no encryption.
 password = ""
 
 [mount]
-# Optional helper to ensure your backup target is reachable.
-# Executed as: [command] [target]
-command = "mount-nas"
-target  = "new-backups"
+# Optional: mount a NAS share before backing up.
+# The share name is resolved to the correct NFS server and export path
+# automatically — no external script required.
+# Supported: new-backups, new-documents, isos, pictures, movies, videos,
+#            backups, owncloud, lan-share, repos, documents
+share = "new-backups"
+# user = "yonas"   # defaults to $USER if omitted
 
 [backup]
 # Paths to include in the snapshot.
@@ -86,26 +90,26 @@ globs = [
 
 [retention]
 # Snapshot retention policy
-keep_daily   = 7
-keep_weekly  = 4
-keep_monthly = 6
+daily   = 7
+weekly  = 4
+monthly = 6
 ```
 
 ---
 
 ## ⚙️ Usage & Pipeline
 
-| Stage | Command | Purpose | Skip Flag |
-| :--- | :--- | :--- | :--- |
-| **Mount** | `mount-nas` | Mounts your remote storage | `--no-mount` |
-| **Init** | `rustic init` | Initializes repo (if missing) | *Auto-skip* |
-| **Check** | `rustic check` | Verifies repository health | `--no-check` |
-| **Backup**| `rustic backup`| Performs the actual snapshot | — |
-| **Forget**| `rustic forget`| Prunes old snapshots | `--no-prune` |
-| **Compact**| `rustic prune` | Reclaims physical disk space | `--no-prune` |
+| Stage | What it does | Skip Flag |
+| :--- | :--- | :--- |
+| **Mount** | Mounts the configured NAS share natively via NFS | `--no-mount` |
+| **Init** | Initialises the repo (auto-skipped if it already exists) | *Auto-skip* |
+| **Check** | Verifies repository integrity (`rustic check`) | `--no-check` |
+| **Backup** | Creates a new snapshot (`rustic backup`) | — |
+| **Forget** | Applies retention policy (`rustic forget --prune`) | `--no-prune` |
+| **Compact** | Reclaims disk space (`rustic prune`) | `--no-prune` |
 
 > [!TIP]
-> Use `--sudo` to prefix commands with `doas` for privileged operations like mounting or accessing restricted system files.
+> Use `--sudo` to prefix `rustic` commands with `doas` for privileged operations like accessing restricted system files.
 
 ---
 
